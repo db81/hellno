@@ -1,0 +1,25 @@
+INTENDED MODE OF OPERATION
+
+If you have a project that has all of its dependencies on Hackage, just do
+$ hellno setup
+in your project directory. Alternatively, when you have several projects that
+can co-exist without breaking packages, you can just run
+$ hellno path/to/1st/project.cabal path/to/another.cabal
+
+If your project depends on local libs, you can use cabal-src-install. Make sure
+it's in your PATH and run
+$ hellno local-install
+to install the necessary deps and cabal-src-install your packages.
+
+
+
+Some of the known issues/limitations:
+ - Non-existent handling of packages with several libraryDirs (do these exist
+   anyway?)
+ - Version tags not supported.
+ - Error handling is bad.
+ - Executables aren't handled at all.
+
+TODO:
+ - Parse .cabal files from the cabal-install cache to learn what executables
+   belong to a package.
