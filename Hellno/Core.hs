@@ -8,7 +8,6 @@
 
 module Hellno.Core where
 
-import Data.Maybe (isJust, fromJust)
 import Data.Map (Map, (!))
 import qualified Data.Map as M
 import Data.Set (Set)
@@ -62,7 +61,7 @@ setupEnvironment pretend args = do
         " precompiled packages, installing " ++ (show $ length cabalinst)
     mapM_ pushPackage precomp
     recacheUserDb
-    when (not pretend) $ do
+    unless pretend $ do
         cabalInstall args
         mapM_ grabAndPush cabalinst
         recacheUserDb
@@ -70,9 +69,8 @@ setupEnvironment pretend args = do
 grabAndPush pid = do
     r <- E.try (grabPackage pid)
     case r of
-        (Left e) -> do
-            putStrLn $ "Could not grab package: " ++
-                (show (e :: E.IOException))
+        (Left e) -> putStrLn $ "Could not grab package: " ++
+            show (e :: E.IOException)
         (Right a) -> pushPackage a
 
 
@@ -80,11 +78,14 @@ grabAndPush pid = do
 -- that are required by at least one of the arguments.
 cleanDatabase :: [String] -> IO ()
 cleanDatabase args' = do
+    n <- fmap length listPackages
     let args = case args' of
-                ([]) -> error "You gave empty package list to depclean. If you\nwant to delete the whole database use hellno depclean all"
+                ([]) -> error $ unlines
+                    ["You gave empty package list to depclean. If you want to",
+                     "delete the whole database use hellno depclean all\n",
+                     show n ++ " packages currently in the database."]
                 (["all"]) -> []
                 a -> a
-    n <- fmap length listPackages
     clearPackages
     recacheUserDb
     fixed <- ghcPkgList
@@ -184,4 +185,4 @@ isCabalInst _ = False
 -- Almost duplicating Hellno.Packages.packageIdToString...
 pid2str :: PackageId -> String
 pid2str (PackageIdentifier (PackageName name) (Version vs _)) =
-    name ++ "-" ++ (intercalate "." $ map show vs)
+    name ++ "-" ++ intercalate "." (map show vs)

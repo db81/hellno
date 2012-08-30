@@ -10,9 +10,7 @@ import System.Process
 import System.Exit
 import Text.Parsec
 import Data.Maybe
-import Data.List (intercalate)
 import Data.Functor.Identity (Identity)
-import Control.Applicative ((<*))
 
 import Hellno
 import Hellno.Packages
@@ -26,7 +24,7 @@ cabalDryRun onlyDeps args = do
     res <- fmap (parse pkgs "") $ readProcess "cabal" (["install", "--dry-run",
         "--avoid-reinstalls"] ++ d ++ args) ""
     case res of
-        (Left err) -> error $ "Parsing cabal output failed: " ++ (show err) -- ?
+        (Left err) -> error $ "Parsing cabal output failed: " ++ show err
         (Right a) -> return a
 
 
@@ -35,7 +33,7 @@ ghcPkgList :: IO [PackageId]
 ghcPkgList = do
     res <- fmap (parse pkgs "") $ readProcess "ghc-pkg" ["list"] ""
     case res of
-        (Left err) -> error $ "Parsing ghc-pkg output failed: " ++ (show err)
+        (Left err) -> error $ "Parsing ghc-pkg output failed: " ++ show err
         (Right a) -> return a
 
 
@@ -68,11 +66,11 @@ runAndWait prg args = do
 -- that can't be parsed as a package name.
 pkgs :: (Stream s Identity Char) => Parsec s () [PackageId]
 pkgs = fmap catMaybes $ many (try pkg <|> skipLine)
-    where skipLine = many (noneOf "\n") >> char '\n' >> return Nothing
+    where skipLine = many (noneOf "\n") >> newline >> return Nothing
           pkg = do
               spaces
               optional $ try $ char '('
               pid <- parsePackageName
               optional $ try $ char ')'
-              char '\n'
+              skipLine
               return $ Just pid

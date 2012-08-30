@@ -13,7 +13,7 @@ import System.Posix.Files
 import Data.List (intercalate, isPrefixOf)
 import Data.Functor.Identity (Identity)
 import Text.Parsec
-import Control.Applicative ((<*), (<*>), (*>), (<$>))
+import Control.Applicative ((<*))
 import Control.Monad
 
 import Hellno
@@ -28,7 +28,7 @@ lookupPackage pid = do
     let (name, fullname) = packageIdToString pid
     let path = pkgRoot </> name </> fullname
     de <- doesDirectoryExist path
-    if de == False then
+    if not de then
         return []
     else
         fmap (map InstalledPackageId) $ filterM (doesDirectoryExist .
@@ -48,7 +48,7 @@ lookupPackageDeps ipid = do
 
 -- | List all packages in the database.
 listPackages :: IO [InstalledPackageId]
-listPackages = do
+listPackages =
     fmap (map InstalledPackageId . concat . concat) $
         getDirectoryContents' pkgRoot >>= mapM (\p ->
             getDirectoryContents' (pkgRoot </> p) >>= mapM (\v ->
@@ -138,15 +138,15 @@ clearPackages = getDirectoryContents' ghcPkg >>= filterM islnk >>=
 -- | Converts a package identifier to a tuple of (\"foo\", \"foo-0.2.1\")
 packageIdToString :: PackageIdentifier -> (String, String)
 packageIdToString (PackageIdentifier (PackageName name) (Version ver _)) =
-    (name, name ++ "-" ++ (intercalate "." $ map show ver))
+    (name, name ++ "-" ++ intercalate "." (map show ver))
 
 
 -- | Takes input of the form \"foo-1.2.3\".
 parsePackageName :: (Stream s Identity Char) => Parsec s () PackageId
 parsePackageName = do
     name <- fmap (intercalate "-") $ many $ try $
-        (many $ noneOf "-.\n") <* char '-'
-    ver <- fmap (map read) $ sepBy1 (many digit) (char '.')
+        many (noneOf "-.\n") <* char '-'
+    ver <- fmap (map read) $ sepBy1 (many1 digit) (char '.')
     return $ PackageIdentifier (PackageName name) (Version ver [])
 
 

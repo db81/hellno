@@ -17,7 +17,7 @@ import Distribution.Version
 -- TODO: use this for getting the default user-install prefix. Maybe not.
 --import Distribution.Simple.InstallDirs
 import Text.Parsec
-import Control.Applicative ((<*), (<*>), (*>), (<$>))
+import Control.Applicative ((<*), (<*>), (<$>))
 import System.Directory
 import System.FilePath
 import System.Process
@@ -54,7 +54,7 @@ instPrefix = unsafePerformIO $ do
 tryTill p skip end =
     let r = return []
      in (eof >> r) <|> (try end >> r) <|> (++) <$>
-            (fmap (:[]) (try p) <|> (skip >> r)) <*> (tryTill p skip end)
+            (fmap (:[]) (try p) <|> (skip >> r)) <*> tryTill p skip end
 
 --pkgRoot = "/home/user/.cabal/hellno"
 -- | The place where hellno will store its stuff.
@@ -68,7 +68,7 @@ ghcPkg :: FilePath
 ghcPkg = unsafePerformIO $ do
     r <- readProcess "ghc-pkg" ["list"] ""
     case parse p "" r of
-        (Left e) -> error $ "Parsing ghc-pkg output failed: " ++ (show e)
+        (Left e) -> error $ "Parsing ghc-pkg output failed: " ++ show e
         (Right []) -> error "No paths found in ghc-pkg output"
         (Right a) -> return $ last a
     where p = try path <|> try skipLine <|> (eof >> return [])

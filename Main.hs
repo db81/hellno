@@ -19,6 +19,7 @@ data Opt = Opt String | ArgOpt String String
 instance Eq Opt where
     (==) (Opt s) (Opt s') = s == s'
     (==) (ArgOpt s _) (ArgOpt s' _) = s == s'
+    (==) _ _ = False
 
 simpleOpt :: Char -> String -> String -> OptDescr Opt
 simpleOpt c o s = Option [c] [o] (NoArg $ Opt o) s
