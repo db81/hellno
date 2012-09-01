@@ -1,15 +1,71 @@
+ANOTHER CABAL WRAPPER? HELL NO!
+
+Please bear with me. The approach is different from the numerous sandboxing
+tools we have in that it aims to avoid recompilation by keeping a database of
+precompiled packages. The database can hold several variants of the same package
+version compiled against different dependencies.
+
+Generally, with hellno you'll get the same result as for blowing away your user
+package database and doing a nice clean install but without having to recompile
+everything and with ability to easily revert back and change between projects.
+
+For example, suppose you have a project that uses yesod-1.0.0.1 and you want to
+upgrade to the latest 1.1.0.2. You change your project.cabal, run hellno setup
+and get:
+$ hellno setup
+61 fixed packages, 98 other packages required.
+Using 60 precompiled packages, installing 38
+.............................................
+Which says that you will only compile 38 packages instead of the 98 you would
+have to wait to finish building if you just had deleted your sandbox/user db.
+
+One might argue that with a sandbox you can force reinstalls and get basically
+the same result, but this would result in lots of broken packages cluttering
+your sandbox (and after a couple upgrades it will become big and messy so you
+will probably delete it to start over anyway) and, more importantly, this can't
+be safely done to a shared sandbox without fearing of something breaking. You
+can still get away by using per-project sandboxes, though each one can be up to
+about 100M in size.
+
+When you ask hellno to setup the environment for a project it will run
+cabal --dry-run to determine the required dependencies and then put the symlinks
+to .conf files in ~/.ghc/i386-linux-7.4.1/package.conf.d/ (or wherever your
+GHC keeps them) and links to the lib directories in $user_install_prefix/lib.
+
+
+SETTING UP
+
+Hellno has a set of packages it calls "fixed", those are usually the core
+libraries that are installed globally. Any package that wasn't installed by
+hellno is treated as fixed. That means that you should strip your package
+database to the bare minimum. Blow away (or backup if you care about it) your
+user database (rm -f ~/.ghc/i386-linux-7.4.1/package.conf.d/* &&
+rm -rf ~/.cabal/lib/*). Then run ghc-pkg check to ensure that your fixed
+packages are in consistent state. Now you're ready to run hellno.
+
+
 INTENDED MODE OF OPERATION
 
-If you have a project that has all of its dependencies on Hackage, just do
+Let's say your project doesn't depend on any local packages (local meaning not
+on Hackage). In your project directory just run
 $ hellno setup
-in your project directory. Alternatively, when you have several projects that
-can co-exist without breaking packages, you can just run
-$ hellno path/to/1st/project.cabal path/to/another.cabal
+This will bring in all required dependencies, possibly using precompiled
+packages. If you already ran "hellno setup" for this project (and didn't change
+the cabal file or run cabal update), this won't have to compile anything.
+Alternatively, you can pass the list of cabal files to hellno setup like you
+would to cabal-install and work on several projects without having to switch,
+but if their dependencies can't coexist, it will fail.
 
-If your project depends on local libs, you can use cabal-src-install. Make sure
-it's in your PATH and run
+Now suppose you have a local lib named foo. Go into its directory and run
 $ hellno local-install
-to install the necessary deps and cabal-src-install your packages.
+(this will require cabal-install-src being in your PATH). Now you can run
+hellno setup for projects depending on foo.
+After you change something in foo you have to run local-install again, as hellno
+(and cabal) has no way of knowing that foo changed.
+
+With time you'll likely decide that your ~/.cabal/hellno/ has grown way too big.
+To deal with this, you can use "hellno depclean", passing it the projects you're
+currently working on (unless you want to compile their dependencies again).
 
 
 
@@ -18,8 +74,13 @@ Some of the known issues/limitations:
    anyway?)
  - Version tags not supported.
  - Error handling is bad.
- - Executables aren't handled at all.
+ - Executables aren't handled at all. Neither is documentation.
+ - Since cabal --dry-run tries to use the latest package versions, you get
+   different results from "hellno setup" after running "cabal update", which
+   is actually not that bad a way to update your deps, so maybe this is not
+   an issue after all.
 
 TODO:
- - Parse .cabal files from the cabal-install cache to learn what executables
-   belong to a package.
+ - Use hackage-db to deal with executables.
+ - Rewrite this README so that I stop feeling the urge to put
+   *** LATE NIGHT WRITITNG ALERT *** on top of it.
