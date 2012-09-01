@@ -81,7 +81,7 @@ grabPackage pid = do
     hashname <- getHashName pid
     -- We won't touch share/ for now.
     moveRecursive (instPrefix </> "lib" </> fullname) $ pkgRoot </> name </>
-        fullname </> hashname
+        fullname </> hashname </> "lib" </> fullname
     moveRecursive (ghcPkg </> (hashname ++ ".conf")) $ pkgRoot </> name </>
         fullname </> (hashname ++ ".conf")
     return $ InstalledPackageId hashname
@@ -96,7 +96,8 @@ pushPackage ipid = do
     let (pid, hashname) = parseInstalledPackageId ipid
     let (name, fullname) = packageIdToString pid
     let path = pkgRoot </> name </> fullname </> hashname
-    createSymbolicLink path $ instPrefix </> "lib" </> fullname
+    createSymbolicLink (path </> "lib" </> fullname) $
+        instPrefix </> "lib" </> fullname
     createSymbolicLink (path ++ ".conf") $ ghcPkg </> (hashname ++ ".conf")
 
 
