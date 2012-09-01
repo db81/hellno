@@ -30,16 +30,16 @@ options = [
 
 usageHeader = unlines [
     "Usage:",
-    "hellno [OPTIONS] < setup | try | depclean > [PACKAGES]",
-    "hellno [OPTIONS] reset\n",
+    "hellno [OPTIONS] < setup | try | install | depclean > [PACKAGES]",
+    "hellno [OPTIONS] < reset | local-install >\n",
     "Modes:",
     "setup - configure the environment for building the given package(s)",
     "try - the same as setup but don't install anything",
+    "install - install the package. For local packages, do use local-install.",
     "local-install - install using cabal-src-install",
     "depclean - clean the database so that only packages required by at least",
     "one of the arguments remain",
-    "reset - reset the environment so that only fixed packages remain,",
-    "useful if you need to do your own cabal install\n",
+    "reset - reset the environment so that only fixed packages remain\n",
     "Options:"
     ]
 
@@ -50,6 +50,7 @@ handleArgs opts mode err
     | ("setup":xs) <- mode = setupEnvironment False xs
     | ("try":xs) <- mode = setupEnvironment True xs
     | ("depclean":xs) <- mode = cleanDatabase xs
+    | ("install":xs) <- mode = cabalInstallPackage xs
     | ("local-install":[]) <- mode = cabalSrcInstall
     | ("reset":[]) <- mode = clearPackages >> recacheUserDb
     | otherwise = putStrLn "Error: No mode specified or unknown mode." >>

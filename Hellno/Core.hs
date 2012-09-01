@@ -98,12 +98,22 @@ cleanDatabase args' = do
     n' <- fmap length listPackages
     putStrLn $ "Dropped " ++ (show $ n - n') ++ " packages."
 
+
+-- TODO: Merge these two.
 cabalSrcInstall :: IO ()
 cabalSrcInstall = do
     setupEnvironment False []
     pkgs <- cabalDryRun False []
     runAndWait "cabal-src-install" ["--user"]
     mapM lookupPackage pkgs >>= mapM_ dropPackage . concat
+    mapM_ grabAndPush pkgs
+    recacheUserDb
+
+cabalInstallPackage :: [String] -> IO ()
+cabalInstallPackage args = do
+    setupEnvironment False args
+    pkgs <- cabalDryRun False args
+    runAndWait "cabal" $ ["--user", "install"] ++ args
     mapM_ grabAndPush pkgs
     recacheUserDb
 
