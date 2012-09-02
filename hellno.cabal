@@ -4,12 +4,18 @@ license: LGPL-3
 author: Danny B <danny.b.eml@gmail.com>
 maintainer: Danny B <danny.b.eml@gmail.com>
 stability: Alpha
-cabal-version: >=1.2
+cabal-version: >=1.10
 build-type: Simple
 category: Development
 
 executable hellno
     main-is: Main.hs
+    other-modules:
+        Hellno
+        Hellno.Packages
+        Hellno.Cabal
+        Hellno.Core
+    -- TODO: Make the depends more sane.
     build-depends:
         base ==4.5.*,
         process ==1.1.*,
