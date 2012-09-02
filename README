@@ -46,6 +46,10 @@ packages are in consistent state. Now you're ready to run hellno.
 
 INTENDED MODE OF OPERATION
 
+In a nutshell, use "hellno setup" to switch between projects,
+"hellno local-install" to install local packages and "hellno depclean" to clean
+up the hellno package storage. In more detail:
+
 Let's say your project doesn't depend on any local packages (local meaning not
 on Hackage). In your project directory just run
 $ hellno setup

@@ -33,7 +33,7 @@ usageHeader = unlines [
     "hellno [OPTIONS] < setup | try | install | depclean > [PACKAGES]",
     "hellno [OPTIONS] < reset | local-install >\n",
     "Modes:",
-    "setup - configure the environment for building the given package(s)",
+    "setup - bring in all (and only) dependencies required by package(s)",
     "try - the same as setup but don't install anything",
     "install - install the package. For local packages, do use local-install.",
     "local-install - install using cabal-src-install",
