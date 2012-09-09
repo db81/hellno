@@ -57,6 +57,6 @@ handleArgs opts mode err
         exitFailure
 
 main = do
-    (opts, mode, err) <- fmap (getOpt Permute options) $ instPrefix `seq`
+    (opts, mode, err) <- fmap (getOpt RequireOrder options) $ instPrefix `seq`
         ghcPkg `seq` pkgRoot `seq` getArgs
     handleArgs opts mode err
