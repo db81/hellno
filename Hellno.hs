@@ -14,10 +14,9 @@ module Hellno (
 
 import Distribution.Package
 import Distribution.Version
--- TODO: use this for getting the default user-install prefix. Maybe not.
---import Distribution.Simple.InstallDirs
 import Text.Parsec
 import Control.Applicative ((<*), (<*>), (<$>))
+import qualified Data.ByteString as BS
 import System.Directory
 import System.FilePath
 import System.Process
@@ -31,8 +30,8 @@ instPrefix :: FilePath
 instPrefix = unsafePerformIO $ do
     cnfPath <- fmap (</>"config") $ getAppUserDataDirectory "cabal"
     h <- openFile cnfPath ReadMode
-    res <- runParserT p () cnfPath (h, 0 :: Integer)
-    hClose h
+    -- BS.hGetContents reads the file strictly and then closes it.
+    res <- fmap (parse p cnfPath) $ BS.hGetContents h
     case res of
         (Left e) -> error $ show e
         (Right []) -> return $ dropFileName cnfPath
@@ -77,20 +76,3 @@ ghcPkg = unsafePerformIO $ do
             a <- (:) <$> char '/' <*> many (noneOf ":\n")
             string ":\n"
             fmap (a:) p
-
--- Might seem like an overkill but it seems better than using readFile and
--- the standard Stream String m Char and then forcing the result. It's possible
--- too, but easier to accidentally mess up.
--- Notice how this instance has to preserve the position inside the file. That's
--- because try's backtracking won't work otherwise which is not entirely obvious
--- from the documentation. Or rather, actually entirely obvious but only after
--- you have figured it out.
-instance Stream (Handle, Integer) IO Char where
-    uncons (h, pos) = do
-        end <- hIsEOF h
-        if end then
-            return Nothing
-        else do
-            hSeek h AbsoluteSeek pos
-            c <- hGetChar h
-            return $ Just (c, (h, pos + 1))
