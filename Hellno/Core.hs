@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {- |
  For lack of a better name, that's the module that deals with the core
  functionality, that is, figuring out what packages to install.
@@ -13,14 +15,19 @@ import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.List (intercalate)
+import Data.Maybe (catMaybes)
 import Control.Monad.Trans.State.Strict
 import Control.Monad.IO.Class
 import Control.Monad
 import qualified Control.Exception as E
+import System.FilePath
+import System.Directory
 
 import Hellno
 import Hellno.Packages
 import Hellno.Cabal
+import Hellno.CabalCache
+
 
 
 -- | A datatype describing what we intend to do with a package.
@@ -53,7 +60,6 @@ setupEnvironment pretend args = do
     putStrLn $ (show $ length fixed) ++ " fixed packages, " ++
         (show $ length req) ++ " other packages required."
     m <- resolveEnvironment fixed req
-    --mapM_ print $ M.elems m
     let precomp = map (\(Precompiled i) -> i) $ filter isPrecomp $ M.elems m
     let cabalinst = map (\(CabalInstall i) -> i) $ filter isCabalInst $
                         M.elems m
@@ -63,15 +69,27 @@ setupEnvironment pretend args = do
     recacheUserDb
     unless pretend $ do
         cabalInstall args
-        mapM_ grabAndPush cabalinst
+        grabAndPush cabalinst
         recacheUserDb
 
-grabAndPush pid = do
-    r <- E.try (grabPackage pid)
-    case r of
-        (Left e) -> putStrLn $ "Could not grab package: " ++
-            show (e :: E.IOException)
-        (Right a) -> pushPackage a
+-- | Grab the packages and then push them.
+grabAndPush :: [PackageId] -> IO ()
+grabAndPush [] = return ()
+grabAndPush pkgs = do
+    cabal <- fmap ((</> "packages")) $ getAppUserDataDirectory "cabal"
+    caches <- mapM (readCache . (\a -> cabal </> a </> "00-index.cache")) =<<
+        getDirectoryContents' cabal
+    mapM_ pushPackage . catMaybes =<< mapM (uncurry grabPackage') .
+        zip pkgs . map getCondExecutables . filter hasCondLibrary =<<
+        getPackageDescriptions caches pkgs
+    where grabPackage' pid execs = do
+            res <- E.try $ grabPackage pid execs
+            case res of
+                (Right a) -> return $ Just a
+                (Left (e :: E.SomeException)) -> do
+                    putStrLn $ "WARNING: could not grab package " ++
+                        snd (packageIdToString pid) ++ ": " ++ show e
+                    return Nothing
 
 
 -- | Clean the precompiled packages database only leaving the packages
@@ -106,7 +124,7 @@ cabalSrcInstall = do
     pkgs <- cabalDryRun False []
     runAndWait "cabal-src-install" ["--user"]
     mapM lookupPackage pkgs >>= mapM_ dropPackage . concat
-    mapM_ grabAndPush pkgs
+    grabAndPush pkgs
     recacheUserDb
 
 cabalInstallPackage :: [String] -> IO ()
@@ -114,7 +132,7 @@ cabalInstallPackage args = do
     setupEnvironment False args
     pkgs <- cabalDryRun False args
     runAndWait "cabal" $ ["--user", "install"] ++ args
-    mapM_ grabAndPush pkgs
+    grabAndPush pkgs
     recacheUserDb
 
 

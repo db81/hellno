@@ -6,7 +6,8 @@ module Hellno.CabalCache (
     Cache,
     readCache,
     getPackageDescriptions,
-    getCondExecutables
+    getCondExecutables,
+    hasCondLibrary
     ) where
 
 import Distribution.PackageDescription
@@ -81,6 +82,12 @@ getPackageDescriptions caches pkgs = do
 -- | Obtain condExecutables' names from GenericPackageDescription.
 getCondExecutables :: GenericPackageDescription -> [String]
 getCondExecutables = map fst . condExecutables
+
+-- | Does the package has a library in it?
+hasCondLibrary :: GenericPackageDescription -> Bool
+hasCondLibrary = cl . condLibrary
+    where cl (Just _) = True
+          cl (Nothing) = False
 
 
 bs2str = map (chr . fromIntegral) . BS.unpack

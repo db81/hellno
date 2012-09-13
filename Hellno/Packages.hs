@@ -13,7 +13,7 @@ import System.Posix.Files
 import Data.List (intercalate, isPrefixOf)
 import Data.Functor.Identity (Identity)
 import Text.Parsec
-import Control.Applicative ((<*))
+import Control.Applicative ((<*), (<$>), (<*>))
 import Control.Monad
 
 import Hellno
@@ -74,16 +74,27 @@ getHashName pid = do
  want to \"push\" the package which would create appropriate symlinks in
  ~/.ghc and your cabal installation directory so that the package can be used.
  Returns the /InstalledPackageId/ of the newly grabbed package.
+ The second argument is the names of executables provided by the package.
+ The package must have a library.
 -}
-grabPackage :: PackageIdentifier -> IO InstalledPackageId
-grabPackage pid = do
+grabPackage :: PackageIdentifier -> [String] -> IO InstalledPackageId
+grabPackage pid execs = do
     let (name, fullname) = packageIdToString pid
     hashname <- getHashName pid
-    -- We won't touch share/ for now.
-    moveRecursive (instPrefix </> "lib" </> fullname) $ pkgRoot </> name </>
-        fullname </> hashname </> "lib" </> fullname
-    moveRecursive (ghcPkg </> (hashname ++ ".conf")) $ pkgRoot </> name </>
-        fullname </> (hashname ++ ".conf")
+    let path = pkgRoot </> name </> fullname </> hashname
+    let moveStuff a = do
+        e <- doesDirectoryExist $ instPrefix </> a </> fullname
+        when e $ moveRecursive (instPrefix </> a </> fullname)
+            (path </> a </> fullname)
+    moveStuff "lib"
+    moveStuff "share"
+    moveStuff $ "share" </> "doc"
+    moveRecursive (ghcPkg </> hashname <.> "conf") (path <.> "conf")
+    unless (null execs) $ createDirectoryIfMissing True $ path </> "bin"
+    forM_ execs $ \a' -> do
+        let a = "bin" </> a'
+        e <- doesFileExist $ instPrefix </> a
+        when e $ moveRecursive (instPrefix </> a) (path </> a)
     return $ InstalledPackageId hashname
 
 
@@ -96,9 +107,19 @@ pushPackage ipid = do
     let (pid, hashname) = parseInstalledPackageId ipid
     let (name, fullname) = packageIdToString pid
     let path = pkgRoot </> name </> fullname </> hashname
-    createSymbolicLink (path </> "lib" </> fullname) $
-        instPrefix </> "lib" </> fullname
-    createSymbolicLink (path ++ ".conf") $ ghcPkg </> (hashname ++ ".conf")
+    let makeLink name = linkIfExists (path </> name </> fullname)
+            (instPrefix </> name </> fullname)
+    makeLink "lib"
+    makeLink "share"
+    makeLink $ "share" </> "doc"
+    linkIfExists (path <.> "conf") $ ghcPkg </> hashname <.> "conf"
+    bin <- doesDirectoryExist $ path </> "bin"
+    when bin $ getDirectoryContents' (path </> "bin") >>=
+        mapM_ (\a -> createSymbolicLink (path </> "bin" </> a)
+            (instPrefix </> "bin" </> a))
+    where linkIfExists dest path = do
+            e <- (||) <$> doesDirectoryExist dest <*> doesFileExist dest
+            when e $ createSymbolicLink dest path
 
 
 {- |
@@ -106,9 +127,19 @@ pushPackage ipid = do
 -}
 pullPackage :: PackageIdentifier -> IO ()
 pullPackage pid = do
-    let (_, fullname) = packageIdToString pid
+    let (name, fullname) = packageIdToString pid
+    let removeLink a = do
+            let path = instPrefix </> a </> fullname
+            e <- (||) <$> doesDirectoryExist path <*> doesFileExist path
+            when e $ removeFile $ instPrefix </> a </> fullname
+    removeLink "lib"
+    removeLink "share"
+    removeLink $ "share" </> "doc"
     hashname <- getHashName pid
-    removeFile $ instPrefix </> "lib" </> fullname
+    let binpath = pkgRoot </> name </> fullname </> hashname </> "bin"
+    bin <- doesDirectoryExist binpath
+    when bin $ getDirectoryContents' binpath >>=
+        mapM_ (\a -> removeFile $ instPrefix </> "bin" </> a)
     removeFile $ ghcPkg </> (hashname ++ ".conf")
 
 
