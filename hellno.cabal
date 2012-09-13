@@ -15,6 +15,7 @@ executable hellno
         Hellno.Packages
         Hellno.Cabal
         Hellno.Core
+        Hellno.CabalCache
     -- TODO: Make the depends more sane.
     build-depends:
         base ==4.5.*,
