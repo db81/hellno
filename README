@@ -72,19 +72,23 @@ To deal with this, you can use "hellno depclean", passing it the projects you're
 currently working on (unless you want to compile their dependencies again).
 
 
+ON EXECUTABLES
+
+Hellno will take care of a package's executables, but only if it also has a
+library. This is done to simplify the code a bit, under the assumption that an
+executable-only package cannot be a dependency. Even cabal info won't tell you
+whether an executable-only package is intalled, since it only tracks libraries.
+
+
 
 Some of the known issues/limitations:
- - Non-existent handling of packages with several libraryDirs (do these exist
-   anyway?)
  - Version tags not supported.
  - Error handling is bad.
- - Executables aren't handled at all. Neither is documentation.
  - Since cabal --dry-run tries to use the latest package versions, you get
    different results from "hellno setup" after running "cabal update", which
    is actually not that bad a way to update your deps, so maybe this is not
    an issue after all.
 
 TODO:
- - Use hackage-db to deal with executables.
  - Rewrite this README so that I stop feeling the urge to put
    *** LATE NIGHT WRITITNG ALERT *** on top of it.
