@@ -15,6 +15,7 @@ import Data.Functor.Identity (Identity)
 import Text.Parsec
 import Control.Applicative ((<*), (<$>), (<*>))
 import Control.Monad
+import Control.Exception (throw, throwIO)
 
 import Hellno
 
@@ -43,7 +44,7 @@ lookupPackageDeps ipid = do
         pkgRoot </> name </> fullname </> (hashname ++ ".conf")
     case res of
         (IPI.ParseOk [] a) -> return $ IPI.depends a
-        (IPI.ParseFailed err) -> error $ show err -- hmm?
+        (IPI.ParseFailed err) -> throwIO $ userError $ show err
 
 
 -- | List all packages in the database.
@@ -61,7 +62,10 @@ listPackages =
 getHashName :: PackageIdentifier -> IO String
 getHashName pid = do
     let (_, name) = packageIdToString pid
-    fmap (dropExtension . head . filter (name`isPrefixOf`)) $ -- head is unsafe!
+    let head' [] = throw $ userError $ "Package " ++ name ++
+            " not found in GHC database"
+        head' (a:_) = a
+    fmap (dropExtension . head' . filter (name`isPrefixOf`)) $
         getDirectoryContents ghcPkg
 
 
@@ -185,7 +189,8 @@ parsePackageName = do
 parseInstalledPackageId :: InstalledPackageId -> (PackageId, String)
 parseInstalledPackageId (InstalledPackageId str) =
      (fromRight $ parse parsePackageName "" str, str)
-     where fromRight (Right a) = a -- TODO: fix this
+     where fromRight (Right a) = a
+           fromRight _ = throw $ userError $ "Couldn't parse " ++ str
 
 
 -- * Moving directories around

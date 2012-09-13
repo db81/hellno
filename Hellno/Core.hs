@@ -22,6 +22,7 @@ import Control.Monad
 import qualified Control.Exception as E
 import System.FilePath
 import System.Directory
+import System.IO.Error
 
 import Hellno
 import Hellno.Packages
@@ -86,9 +87,13 @@ grabAndPush pkgs = do
             res <- E.try $ grabPackage pid execs
             case res of
                 (Right a) -> return $ Just a
-                (Left (e :: E.SomeException)) -> do
+                (Left (e :: E.IOException)) -> do
                     putStrLn $ "WARNING: could not grab package " ++
-                        snd (packageIdToString pid) ++ ": " ++ show e
+                        snd (packageIdToString pid) ++ ": " ++
+                        if ioeGetErrorType e == userErrorType then
+                            ioeGetErrorString e
+                        else
+                            show e
                     return Nothing
 
 

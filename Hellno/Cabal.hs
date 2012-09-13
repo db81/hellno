@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 
 {- |
  Functions to spawn cabal and ghc-pkg.
@@ -11,6 +11,7 @@ import System.Exit
 import Text.Parsec
 import Data.Maybe
 import Data.Functor.Identity (Identity)
+import qualified Control.Exception as E
 
 import Hellno
 import Hellno.Packages
@@ -57,9 +58,10 @@ recacheUserDb = do
 
 -- | Take the program name and arguments and wait for it to finish.
 runAndWait :: String -> [String] -> IO ExitCode
-runAndWait prg args = do
-    (_, _, _, h) <- createProcess (proc prg args)
-    waitForProcess h
+runAndWait prg args = flip E.catch (\(_ :: E.AsyncException) ->
+    putStrLn "\n\nInterrupting...\n" >> return (ExitFailure 13)) $ do
+        (_, _, _, h) <- createProcess (proc prg args)
+        waitForProcess h
 
 
 -- | Parse a newline-delimited list of packages skipping lines

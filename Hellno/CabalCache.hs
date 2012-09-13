@@ -21,6 +21,7 @@ import System.IO
 import System.FilePath
 import Control.Monad
 import Control.Applicative ((<*), (<*>), (<$>))
+import Control.Exception (throw, throwIO)
 import Data.Char (ord, chr)
 import Numeric
 
@@ -39,7 +40,7 @@ readCache path = do
     h <- openFile path ReadMode
     res <- fmap (runParser p Map.empty path) $ BS.hGetContents h
     case res of
-        (Left e) -> error $ show e
+        (Left e) -> throwIO $ userError $ show e
         (Right a) -> return $ Cache (dropExtension path <.> "tar") a
     where p = do
              string "pkg: "
@@ -69,11 +70,14 @@ getPackageDescriptions caches pkgs = do
               hSeek h AbsoluteSeek $ (fromIntegral b + 1) * 512
               res <- fmap (parsePackageDescription . bs2str) $ BS.hGetSome h s
               case res of
-                (ParseFailed e) -> error $ "parsePackageDescription: " ++
-                    show h ++ "; b# " ++ show b ++ "; " ++ show e
+                (ParseFailed e) -> throwIO $ userError $
+                    "parsePackageDescription: " ++ show h ++ "; b# " ++
+                    show b ++ "; " ++ show e
                 (ParseOk _ gpd) -> fmap (gpd:) $ go tars caches pkgs
-          find _ [] p = error $ "Error: not found in cabal package cache: " ++
-                show p ++ "\n(consider running cabal update)"
+          find _ [] p = throw $ userError $ "Error: not found in cabal " ++
+                "package cache: " ++ show p ++
+                "\n(consider running cabal update and install local " ++
+                "packages using local-install)"
           find tars (c:caches) p =
               case Map.lookup p (blockMap c) of
                     Nothing -> find tars caches p
