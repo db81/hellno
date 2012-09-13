@@ -87,9 +87,9 @@ grabPackage pid execs = do
     hashname <- getHashName pid
     let path = pkgRoot </> name </> fullname </> hashname
     let moveStuff a = do
-        e <- doesDirectoryExist $ instPrefix </> a </> fullname
-        when e $ moveRecursive (instPrefix </> a </> fullname)
-            (path </> a </> fullname)
+            e <- doesDirectoryExist $ instPrefix </> a </> fullname
+            when e $ moveRecursive (instPrefix </> a </> fullname)
+                (path </> a </> fullname)
     moveStuff "lib"
     moveStuff "share"
     moveStuff $ "share" </> "doc"
