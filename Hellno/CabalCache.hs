@@ -43,7 +43,10 @@ readCache path = do
         (Left e) -> throwIO $ userError $ show e
         (Right a) -> return $ Cache (dropExtension path <.> "tar") a
     where p = do
-             string "pkg: "
+            pkg <|> prefVer
+            p <|> (eof >> getState)
+          pkg = do
+             try $ string "pkg: "
              name <- w <* space
              ver <- w <* space
              string "b# "
@@ -51,9 +54,13 @@ readCache path = do
              optional newline
              modifyState $ Map.insert
                 (str2bs $ concat [name, "-", ver]) (read block)
-             p <|> (eof >> getState)
           w = many (noneOf " \n")
 
+          prefVer = do
+            try $ string "pref-ver: "
+            many (noneOf "\n")
+            optional newline
+            return ()
 
 -- | Get package descriptions using the provided caches.
 getPackageDescriptions :: [Cache] -> [PackageId] -> IO [GenericPackageDescription]
