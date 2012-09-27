@@ -128,6 +128,7 @@ cabalSrcInstall = do
     setupEnvironment False []
     pkgs <- cabalDryRun False []
     runAndWait "cabal-src-install" ["--user"]
+    runAndWait "cabal" ["info"] -- this updates 00-index.cache
     mapM lookupPackage pkgs >>= mapM_ dropPackage . concat
     grabAndPush pkgs
     recacheUserDb
