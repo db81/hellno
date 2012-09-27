@@ -127,6 +127,9 @@ cabalSrcInstall :: IO ()
 cabalSrcInstall = do
     setupEnvironment False []
     pkgs <- cabalDryRun False []
+    r <- findExecutable "cabal-src-install"
+    when (r == Nothing) $ E.throwIO $ userError $
+        "Couldn't find cabal-src-install (is it in PATH?)"
     runAndWait "cabal-src-install" ["--user"]
     runAndWait "cabal" ["info"] -- this updates 00-index.cache
     mapM lookupPackage pkgs >>= mapM_ dropPackage . concat
